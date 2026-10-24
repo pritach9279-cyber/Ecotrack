@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-aside"><span class="eyebrow">Begin with awareness</span><h1>A better relationship with your everyday impact.</h1><p>One short assessment can show you where your choices connect with the bigger picture.</p><div class="auth-quote">"Progress starts with noticing."</div></div>
+    <div class="auth-card">
+        <span class="eyebrow">Create your account</span><h2>Make your impact visible.</h2>
+        <p class="auth-sub">Your account keeps your estimates, history and goals together.</p>
+        <form method="POST" novalidate>
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" required maxlength="150" value="{{ form.get('name','') }}">
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required value="{{ form.get('email','') }}">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-field"><input type="password" id="password" name="password" required minlength="8" autocomplete="new-password"><button type="button" class="password-toggle" data-target="password" aria-label="Show password">Show</button></div>
+                <div class="strength-meter"><span id="strength-bar"></span></div><p id="strength-label" class="field-note">Use 8+ characters with upper, lower, number and symbol.</p>
+                <ul class="password-rules" id="password-rules"><li data-rule="length">At least 8 characters</li><li data-rule="upper">One uppercase letter</li><li data-rule="lower">One lowercase letter</li><li data-rule="number">One number</li><li data-rule="special">One special character</li></ul>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <div class="password-field"><input type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password"><button type="button" class="password-toggle" data-target="confirm_password" aria-label="Show password">Show</button></div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+    </div>
+</div>
+{% endblock %}

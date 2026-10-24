@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Reduction Goal{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🎯 Personal Reduction Goal</h1>
+    <p class="muted">Set a target and track your progress based on recorded activity.</p>
+</div>
+
+<div class="goal-layout">
+    <div class="card form-card">
+        <h3>Set a New Goal</h3>
+        <form method="POST" novalidate>
+            <div class="form-group">
+                <label for="target_percentage">Target Reduction (%)</label>
+                <input type="number" step="1" min="1" max="90" id="target_percentage" name="target_percentage" required>
+            </div>
+            <div class="form-group">
+                <label for="target_date">Target Date</label>
+                <input type="date" id="target_date" name="target_date" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Set Goal</button>
+        </form>
+        <p class="muted small">Setting a new goal replaces your current active goal. Your baseline is
+           calculated from your average CO₂e over your most recent recorded days.</p>
+    </div>
+
+    <div class="card">
+        <h3>Current Progress</h3>
+        {% if active_goal and progress %}
+            <div class="progress-bar-fill" data-progress="{{ progress.percent }}"></div>
+           by <strong>{{ active_goal.target_date }}</strong>.</p>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width: {{ progress.percent }}%;"></div>
+        </div>
+        <p class="muted">{{ progress.percent }}% progress</p>
+        <div class="goal-stats">
+            <div><span class="stat-label">Baseline Avg</span><span class="stat-value-sm">{{ progress.baseline }} kg</span></div>
+            <div><span class="stat-label">Recent Avg</span><span class="stat-value-sm">{{ progress.recent_avg }} kg</span></div>
+            {% if progress.target_value is not none %}
+            <div><span class="stat-label">Target Avg</span><span class="stat-value-sm">{{ progress.target_value }} kg</span></div>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="muted">No active goal yet. Set one to start tracking progress.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

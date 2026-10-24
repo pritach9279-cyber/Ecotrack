@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>My Profile</h1>
+</div>
+
+<div class="card form-card profile-card">
+    <form method="POST" novalidate>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" required value="{{ user.name }}">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" value="{{ user.email }}" disabled>
+            </div>
+            <div class="form-group">
+                <label for="date_of_birth">Date of Birth</label>
+                <input type="date" id="date_of_birth" name="date_of_birth" max="{{ now_date }}" required value="{{ user.date_of_birth or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="calculated_age">Age</label>
+                <input type="number" id="calculated_age" readonly aria-describedby="age-note" value="{{ user.age if user.age else '' }}" placeholder="Calculated from DOB">
+                <small id="age-note" class="field-note">Calculated automatically from your date of birth.</small>
+            </div>
+            <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" required value="{{ user.city }}">
+            </div>
+            <div class="form-group">
+                <label for="state">State</label>
+                <input type="text" id="state" name="state" value="{{ user.state or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="country">Country</label>
+                <input type="text" id="country" name="country" value="{{ user.country or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="household_size">Household Size</label>
+                <input type="number" id="household_size" name="household_size" min="1" max="30" required value="{{ user.household_size or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="occupation">Occupation</label>
+                <input type="text" id="occupation" name="occupation" value="{{ user.occupation or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="transport_mode">Primary Transport Mode</label>
+                <select id="transport_mode" name="transport_mode" required>
+                    {% for t in ['Walking','Bicycle','Electric Vehicle','Train/Metro','Public Bus','CNG Vehicle','Petrol Bike','Petrol Car','Diesel Car'] %}
+                    <option value="{{ t }}" {{ 'selected' if user.transport_mode==t }}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="avg_daily_distance">Average Daily Travel Distance (km)</label>
+                <input type="number" step="0.1" min="0" id="avg_daily_distance" name="avg_daily_distance" required value="{{ user.avg_daily_distance }}">
+            </div>
+            <div class="form-group">
+                <label for="food_pattern">Food Pattern</label>
+                <select id="food_pattern" name="food_pattern" required>
+                    <option value="Vegetarian" {{ 'selected' if user.food_pattern=='Vegetarian' }}>Vegetarian</option>
+                    <option value="Mixed" {{ 'selected' if user.food_pattern=='Mixed' }}>Mixed</option>
+                </select>
+            </div>
+            <div class="form-group full-width">
+                <label for="avg_electricity">Average Daily Electricity Consumption (kWh)</label>
+                <input type="number" step="0.1" min="0" id="avg_electricity" name="avg_electricity" required value="{{ user.avg_electricity }}">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+    </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+    const dobField = document.getElementById('date_of_birth');
+    const ageField = document.getElementById('calculated_age');
+    const ageNote = document.getElementById('age-note');
+
+    function updateAge() {
+        if (!dobField.value) {
+            ageField.value = '';
+            ageNote.textContent = 'Calculated automatically from your date of birth.';
+            return;
+        }
+
+        const [year, month, day] = dobField.value.split('-').map(Number);
+        const today = new Date();
+        let age = today.getFullYear() - year;
+        if (today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)) age--;
+
+        if (age < 1 || age > 120) {
+            ageField.value = '';
+            ageNote.textContent = 'Enter a valid date of birth in the past.';
+            return;
+        }
+
+        ageField.value = age;
+        ageNote.textContent = `${age} ${age === 1 ? 'year' : 'years'} old. This updates from your date of birth.`;
+    }
+
+    dobField.addEventListener('input', updateAge);
+    dobField.addEventListener('change', updateAge);
+    updateAge();
+})();
+</script>
+{% endblock %}

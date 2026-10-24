@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-header dashboard-header">
+    <div class="dashboard-heading">
+        <span class="dashboard-eyebrow">YOUR ECO TRACKER</span>
+        <h1>Good to see you, {{ session.get('user_name', 'there') }}.</h1>
+        <p class="muted">Your recent footprint, what is driving it, and where to go next.</p>
+    </div>
+    <div class="dashboard-header-actions">
+        {% if streak and streak > 0 %}<div class="streak-badge"><strong>{{ streak }}</strong><span>day{{ 's' if streak != 1 }}<br>check-in streak</span></div>{% endif %}
+        <a class="btn btn-primary" href="{{ url_for('checkin') }}">Log today's activity</a>
+    </div>
+</div>
+
+<section class="dashboard-metrics" aria-label="Emission summaries">
+    <article class="dashboard-metric metric-today">
+        <span class="metric-label">Today</span>
+        <strong class="metric-value">{{ '%.2f'|format(today_row.total_co2) if today_row else '—' }} <small>kg CO₂e</small></strong>
+        <span class="metric-foot">{{ 'Check-in saved' if today_row else 'No check-in yet today' }}</span>
+    </article>
+    <article class="dashboard-metric">
+        <span class="metric-label">Last 7 days</span>
+        <strong class="metric-value">{{ '%.2f'|format(week_total) }} <small>kg CO₂e</small></strong>
+        <span class="metric-foot">Rolling weekly total</span>
+    </article>
+    <article class="dashboard-metric">
+        <span class="metric-label">This month</span>
+        <strong class="metric-value">{{ '%.2f'|format(month_total) }} <small>kg CO₂e</small></strong>
+        <span class="metric-foot">From the 1st to today</span>
+    </article>
+    <article class="dashboard-metric metric-source">
+        <span class="metric-label">Largest source today</span>
+        {% if largest_category %}
+        <strong class="metric-value source-value">{{ {'transport':'Transport','electricity':'Electricity','food':'Food','waste':'Waste'}[largest_category] }}</strong>
+        <span class="metric-foot">Based on today's check-in</span>
+        {% else %}
+        <strong class="metric-value source-value">Not available</strong>
+        <span class="metric-foot">Log today's activity to see this</span>
+        {% endif %}
+    </article>
+</section>
+
+{% if comparison %}
+<div class="dashboard-comparison {{ 'positive' if comparison.improved else 'neutral' }}">
+    <span class="comparison-mark" aria-hidden="true">{{ '↓' if comparison.improved else '↑' }}</span>
+    <p>
+    {% if comparison.improved %}
+        Your check-in is <strong>{{ comparison.diff }} kg CO₂e lower</strong> than yesterday.
+    {% else %}
+        Your check-in is <strong>{{ comparison.diff }} kg CO₂e higher</strong> than yesterday. Review today's largest source above.
+    {% endif %}
+</p></div>
+{% endif %}
+
+<section class="dashboard-panels" aria-label="Assessment and reduction goal">
+    {% if assessment_result %}
+    <article class="dashboard-panel assessment-summary">
+        <div class="panel-topline"><span class="panel-label">PERSONAL ASSESSMENT</span><a href="{{ url_for('assessment') }}" class="link-sm">Update assessment</a></div>
+        <div class="assessment-total"><strong>{{ '%.2f'|format(assessment_result.total_monthly) }}</strong><span>kg CO₂e<br>per month</span></div>
+        <p class="assessment-annual">{{ '%.2f'|format(assessment_result.tonnes_yearly) }} tonnes CO₂e estimated per year</p>
+        <div class="assessment-mini-breakdown">
+            {% for category, value in assessment_result.monthly.items() %}
+            {% set share = ((value / assessment_result.total_monthly) * 100) if assessment_result.total_monthly else 0 %}
+            <div class="mini-impact impact-{{ category }}"><div><span>{{ category|title }}</span><strong>{{ '%.1f'|format(share) }}%</strong></div><span class="mini-track"><i style="--share: {{ share }}%"></i></span></div>
+            {% endfor %}
+        </div>
+    </article>
+    {% else %}
+    <article class="dashboard-panel next-step-panel">
+        <span class="panel-label">START HERE</span><h2>Build your personal footprint</h2>
+        <p>Answer a few questions about travel, food, electricity, and waste to see your estimated monthly and yearly impact.</p>
+        <a href="{{ url_for('assessment') }}" class="text-action">Start assessment <span aria-hidden="true">→</span></a>
+    </article>
+    {% endif %}
+
+    {% if active_goal and goal_progress %}
+    <article class="dashboard-panel goal-panel">
+        <div class="panel-topline"><span class="panel-label">REDUCTION GOAL</span><a href="{{ url_for('goal') }}" class="link-sm">View goal</a></div>
+        <h2>Reduce your footprint by {{ active_goal.target_percentage }}%</h2>
+        <p class="goal-context">{{ '%.2f'|format(goal_progress.recent_avg) }} kg CO₂e average, compared with your {{ '%.2f'|format(goal_progress.baseline) }} kg baseline.</p>
+        <div class="goal-progress-label"><span>Progress</span><strong>{{ goal_progress.percent }}%</strong></div>
+        <div class="progress-bar-track" role="progressbar" aria-label="Reduction goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ goal_progress.percent }}"><div class="progress-bar-fill" data-progress="{{ goal_progress.percent }}"></div></div>
+        <p class="goal-context">{{ 'Target reached. Great work.' if goal_progress.percent >= 100 else 'Keep logging daily activity to track your progress.' }}</p>
+    </article>
+    {% else %}
+    <article class="dashboard-panel next-step-panel goal-empty-panel">
+        <span class="panel-label">MAKE A PLAN</span><h2>Set a reduction goal</h2>
+        <p>Choose a realistic target and track your progress against your recent activity.</p>
+        <a href="{{ url_for('goal') }}" class="text-action">Create a goal <span aria-hidden="true">→</span></a>
+    </article>
+    {% endif %}
+</section>
+
+<section class="chart-grid dashboard-charts" aria-label="Activity charts">
+    <article class="chart-card">
+        <div class="chart-heading"><div><span class="panel-label">TODAY</span><h2>Where emissions came from</h2></div><a href="{{ url_for('checkin') }}" class="link-sm">View check-in</a></div>
+        <div class="chart-stage"><canvas id="categoryChart" aria-label="Today's emissions by category" role="img"></canvas><div class="chart-empty" id="category-empty" hidden><strong>No check-in data yet</strong><span>Log today's activity to see your category breakdown.</span><a href="{{ url_for('checkin') }}">Add check-in</a></div></div>
+    </article>
+    <article class="chart-card">
+        <div class="chart-heading"><div><span class="panel-label">RECENT ACTIVITY</span><h2>Last 7 days</h2></div><a href="{{ url_for('history') }}" class="link-sm">Full history</a></div>
+        <div class="chart-stage"><canvas id="trendChart" aria-label="Emissions over the last seven days" role="img"></canvas><div class="chart-empty" id="trend-empty" hidden><strong>No activity recorded yet</strong><span>Your daily check-ins will appear here.</span><a href="{{ url_for('checkin') }}">Add first check-in</a></div></div>
+    </article>
+</section>
+
+{% if suggestion_info and suggestion_info.suggestions %}
+{% include "_suggestions.html" %}
+{% endif %}
+
+<div class="dashboard-footer-action"><p>Want to explore a change before making it?</p><a href="{{ url_for('simulator') }}" class="text-action">Open the What-If Simulator <span aria-hidden="true">→</span></a></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-progress]').forEach(element => {
+    element.style.width = `${element.dataset.progress}%`;
+});
+
+fetch("{{ url_for('api_chart_data') }}")
+  .then(r => {
+      if (!r.ok) throw new Error('Chart data could not be loaded');
+      return r.json();
+  })
+  .then(data => {
+      const categoryCanvas = document.getElementById('categoryChart');
+      const categoryHasData = data.category_data.some(value => value > 0);
+      categoryCanvas.hidden = !categoryHasData;
+      document.getElementById('category-empty').hidden = categoryHasData;
+      if (categoryHasData) new Chart(categoryCanvas, {
+          type: 'doughnut',
+          data: {
+              labels: data.category_labels,
+              datasets: [{
+                  data: data.category_data,
+                  backgroundColor: ['#c77b5d', '#5799a0', '#c49a3b', '#6c9671'],
+                  borderColor: '#fff',
+                  borderWidth: 3,
+                  hoverOffset: 5
+              }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 18 } } } }
+      });
+
+      const trendCanvas = document.getElementById('trendChart');
+      const trendHasData = data.trend_data.some(value => value > 0);
+      trendCanvas.hidden = !trendHasData;
+      document.getElementById('trend-empty').hidden = trendHasData;
+      if (trendHasData) new Chart(trendCanvas, {
+          type: 'line',
+          data: {
+              labels: data.trend_labels,
+              datasets: [{
+                  label: 'kg CO2e',
+                  data: data.trend_data,
+                  borderColor: '#2b755b',
+                  backgroundColor: 'rgba(87,153,160,0.13)',
+                  pointBackgroundColor: '#c77b5d',
+                  pointBorderColor: '#fff',
+                  pointRadius: 4,
+                  fill: true,
+                  tension: 0.32
+              }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#edf1ec' }, ticks: { color: '#718078' } }, x: { grid: { display: false }, ticks: { color: '#718078' } } } }
+      });
+  })
+  .catch(() => {
+      document.querySelectorAll('.chart-empty').forEach(empty => {
+          empty.hidden = false;
+          empty.querySelector('strong').textContent = 'Chart unavailable';
+          empty.querySelector('span').textContent = 'Refresh the page to try loading this data again.';
+          empty.querySelector('a').hidden = true;
+      });
+      document.querySelectorAll('.chart-stage canvas').forEach(canvas => canvas.hidden = true);
+  });
+</script>
+{% endblock %}

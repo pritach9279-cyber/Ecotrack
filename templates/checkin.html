@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Daily Check-In{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Daily Carbon Check-In</h1>
+    <p class="muted">Quick daily log — takes less than a minute.</p>
+</div>
+
+<div class="checkin-layout">
+    <form method="POST" class="card form-card" novalidate>
+        <div class="form-section">
+            <h3>🚌 Transport</h3>
+            <div class="form-group">
+                <label for="transport_type">Transport Type</label>
+                <select id="transport_type" name="transport_type" required>
+                    <option value="">Select...</option>
+                    {% for t in factors.get('transport', {}).keys() %}
+                    <option value="{{ t }}" {{ 'selected' if existing and existing.transport_type==t }}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="transport_distance">Distance Travelled Today (km)</label>
+                <input type="number" step="0.1" min="0" id="transport_distance" name="transport_distance" required
+                       value="{{ existing.transport_distance if existing else '' }}">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>💡 Electricity</h3>
+            <div class="form-group">
+                <label for="electricity">Electricity Consumption Today (kWh)</label>
+                <input type="number" step="0.1" min="0" id="electricity" name="electricity" required
+                       value="{{ existing.electricity if existing else '' }}">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>🍽️ Food</h3>
+            <div class="form-group">
+                <label for="food_type">Today's Food Pattern</label>
+                <select id="food_type" name="food_type" required>
+                    <option value="">Select...</option>
+                    {% for f in factors.get('food', {}).keys() %}
+                    <option value="{{ f }}" {{ 'selected' if existing and existing.food_type==f }}>{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>🗑️ Waste</h3>
+            <div class="form-group">
+                <label for="waste_amount">Approximate Waste Generated (kg)</label>
+                <input type="number" step="0.1" min="0" id="waste_amount" name="waste_amount" required
+                       value="{{ existing.waste_amount if existing else '' }}">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+            {{ 'Update Today\'s Check-In' if existing else 'Calculate My CO₂e' }}
+        </button>
+    </form>
+
+    <div class="checkin-result">
+        {% if result %}
+        <div class="card result-card">
+            <h3>Estimated Emissions Today</h3>
+            <ul class="result-list">
+                <li><span>🚌 Transport</span><span>{{ result.transport_co2 }} kg</span></li>
+                <li><span>💡 Electricity</span><span>{{ result.electricity_co2 }} kg</span></li>
+                <li><span>🍽️ Food</span><span>{{ result.food_co2 }} kg</span></li>
+                <li><span>🗑️ Waste</span><span>{{ result.waste_co2 }} kg</span></li>
+            </ul>
+            <div class="result-total">Total Estimated: <strong>{{ result.total_co2 }} kg CO₂e</strong></div>
+
+            {% if suggestion_info and suggestion_info.suggestions %}
+            {% include "_suggestions.html" %}
+            {% endif %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-block">Go to Dashboard</a>
+        </div>
+        {% else %}
+        <div class="card hint-card">
+            <p>💡 Fill in today's activity to see your estimated CO₂e breakdown and personalized suggestions here.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

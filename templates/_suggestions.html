@@ -1,0 +1,42 @@
+<div class="suggestion-box" style="--cat-color: {{ suggestion_info.meta.color }};">
+    <div class="suggestion-head">
+        <span class="suggestion-badge">{{ suggestion_info.meta.icon }}</span>
+        <div>
+            <h4>Focus area: {{ suggestion_info.meta.label }}</h4>
+            <p class="suggestion-impact">{{ suggestion_info.impact_note }}</p>
+        </div>
+    </div>
+
+    <ul class="tip-list">
+        {% for s in suggestion_info.suggestions %}
+        <li>{{ s }}</li>
+        {% endfor %}
+    </ul>
+
+    {% if suggestion_info.more_suggestions %}
+    <details class="more-tips">
+        <summary>Show {{ suggestion_info.more_suggestions|length }} more tip{{ 's' if suggestion_info.more_suggestions|length != 1 }}</summary>
+        <ul class="tip-list">
+            {% for s in suggestion_info.more_suggestions %}
+            <li>{{ s }}</li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+
+    {% if suggestion_info.other_categories %}
+    <details class="more-tips other-cats">
+        <summary>Tips for your other categories</summary>
+        {% for oc in suggestion_info.other_categories %}
+        <div class="other-cat-block">
+            <span class="other-cat-title">{{ oc.meta.icon }} {{ oc.meta.label }}</span>
+            <ul class="tip-list tip-list-sm">
+                {% for s in oc.tips %}
+                <li>{{ s }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </details>
+    {% endif %}
+</div>

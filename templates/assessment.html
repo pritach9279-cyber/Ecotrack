@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}Carbon Assessment{% endblock %}
+{% block content %}
+{% macro assessment_input(key, label, unit, step, maximum, help_text='', name=None) %}
+<div class="form-group assessment-field assessment-question" data-question-field="{{ key }}">
+    <label for="{{ key }}">{{ label }}</label>
+    <div class="slider-control"><input id="{{ key }}-range" class="assessment-range" type="range" min="0" max="{{ maximum }}" step="{{ step }}" value="{{ answers.get(key, 0) or 0 }}" aria-label="Adjust {{ label }}, {{ unit }}" aria-describedby="{{ key }}-unit" aria-controls="{{ key }}"><output for="{{ key }}-range" aria-live="polite">{{ answers.get(key, 0) or 0 }}</output></div>
+    <div class="input-with-unit"><input id="{{ key }}" name="{{ name or key }}" type="number" min="0" step="{{ step }}" inputmode="decimal" placeholder="0" value="{{ answers.get(name or key,'') }}" aria-describedby="{{ key }}-unit{% if help_text %} {{ key }}-help{% endif %}"><span id="{{ key }}-unit">{{ unit }}</span></div>
+    {% if help_text %}<small id="{{ key }}-help">{{ help_text }}</small>{% endif %}
+</div>
+{% endmacro %}
+<div class="assessment-screen assessment-guided" id="assessment-screen" data-scene="travel">
+<div class="page-header assessment-page-header">
+    <span class="assessment-eyebrow">YOUR PERSONAL FOOTPRINT</span>
+    <h1>Build your footprint</h1>
+    <p>Move through each question or switch to quick entry to see everything at once.</p>
+</div>
+<div class="assessment-layout">
+    <form method="POST" id="assessment-form" class="card form-card assessment-form" novalidate>
+        <div class="assessment-form-head">
+            <div><span class="assessment-kicker" id="assessment-mode-label">GUIDED ASSESSMENT</span><h2 id="question-title">How far do you travel by petrol car?</h2></div>
+            <span class="assessment-count"><strong id="current-step-number">01</strong><span id="question-count-label"> / 22</span></span>
+        </div>
+        <div class="assessment-mode-switch" role="group" aria-label="Assessment input mode">
+            <button type="button" id="guided-mode-button" class="mode-button active" aria-pressed="true">Guided</button>
+            <button type="button" id="quick-mode-button" class="mode-button" aria-pressed="false">Quick entry</button>
+        </div>
+        <div class="assessment-progress" role="progressbar" aria-label="Assessment questions" aria-valuemin="0" aria-valuemax="22" aria-valuenow="0"><span id="step-progress"></span></div>
+        <nav class="assessment-steps" aria-label="Jump to a category">
+            <button type="button" class="assessment-step active" aria-current="location" data-step="0"><span class="step-number">01</span><span class="step-name">Travel</span><span class="step-state" aria-hidden="true"></span></button>
+            <button type="button" class="assessment-step" data-step="1"><span class="step-number">02</span><span class="step-name">Food</span><span class="step-state" aria-hidden="true"></span></button>
+            <button type="button" class="assessment-step" data-step="2"><span class="step-number">03</span><span class="step-name">Energy</span><span class="step-state" aria-hidden="true"></span></button>
+            <button type="button" class="assessment-step" data-step="3"><span class="step-number">04</span><span class="step-name">Waste</span><span class="step-state" aria-hidden="true"></span></button>
+        </nav>
+        <section class="assessment-panel" id="panel-0" aria-labelledby="travel-heading" data-panel="0">
+            <div class="assessment-category-banner banner-travel"><span>TRAVEL &amp; TRANSPORT</span></div>
+            <div class="panel-heading"><span class="panel-index">01 · TRAVEL</span><h2 id="travel-heading">How do you get around?</h2><p>Use a typical month for road travel and a yearly total for flights.</p></div>
+            <div class="assessment-fields">
+                {% for key, label in [('petrol_car','Petrol car'),('diesel_car','Diesel car'),('cng_car','CNG car'),('hybrid_car','Hybrid car'),('electric_car','Electric car'),('petrol_bike','Petrol bike / scooter'),('electric_bike','Electric bike / scooter'),('bus','Bus'),('train','Train / metro'),('auto','Auto-rickshaw'),('taxi','Taxi / cab')] %}
+                {{ assessment_input(key, label, 'km / month', 1, 2500) }}
+                {% endfor %}
+                {{ assessment_input('domestic_flights', 'Domestic flights', 'trips / year', 1, 20) }}
+                {{ assessment_input('international_flights', 'International flights', 'trips / year', 1, 20) }}
+            </div>
+            <p class="assessment-note"><span aria-hidden="true">i</span> Walking and cycling have no direct operational emissions, so they are not included in this estimate.</p>
+        </section>
+        <section class="assessment-panel" id="panel-1" aria-labelledby="food-heading" data-panel="1">
+            <div class="assessment-category-banner banner-food"><span>FOOD &amp; MEALS</span></div>
+            <div class="panel-heading"><span class="panel-index">02 · FOOD</span><h2 id="food-heading">What does your food routine look like?</h2><p>Choose your usual diet and estimate food-related waste.</p></div>
+            <fieldset class="form-group assessment-select assessment-question" data-question-field="diet_type">
+                <legend>Which best describes your diet?</legend>
+                <div class="diet-options">
+                    {% for value, label in [('vegan','Vegan'),('vegetarian','Vegetarian'),('eggetarian','Eggetarian'),('mostly_vegetarian','Mostly vegetarian'),('flexitarian','Flexitarian'),('non_vegetarian','Non-vegetarian')] %}
+                    <label class="diet-option"><input type="radio" name="diet_type" value="{{ value }}" {{ 'checked' if (answers.get('diet_type') or 'vegetarian') == value }}><span>{{ label }}</span></label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            <div class="assessment-fields assessment-fields-compact">
+                {{ assessment_input('food_waste', 'Food scraps discarded', 'kg / week', 0.1, 20, 'Includes plate leftovers and spoiled food.', name='organic') }}
+                {{ assessment_input('paper_food', 'Paper food packaging', 'kg / week', 0.1, 20, 'Estimate paper bags, boxes, and packaging.', name='paper') }}
+            </div>
+            <div class="assessment-callout"><strong>Food estimate</strong><span>The selected diet pattern is converted to a monthly estimate using the project’s regional default factors.</span></div>
+        </section>
+        <section class="assessment-panel" id="panel-2" aria-labelledby="energy-heading" data-panel="2">
+            <div class="assessment-category-banner banner-energy"><span>ELECTRICITY &amp; ENERGY</span></div>
+            <div class="panel-heading"><span class="panel-index">03 · ENERGY</span><h2 id="energy-heading">How much electricity do you use?</h2><p>Your utility bill is the best source.</p></div>
+            <div class="assessment-fields assessment-fields-compact">
+                {{ assessment_input('electricity_kwh', 'Grid electricity used', 'kWh / month', 1, 2000, 'Look for monthly units consumed on your bill.') }}
+                {{ assessment_input('solar_generation', 'Solar electricity generated', 'kWh / month', 1, 2000, 'Enter your system’s monthly generation, if available.') }}
+            </div>
+            <div class="assessment-callout"><strong>How energy is counted</strong><span>Solar generation is subtracted from grid electricity. The estimate uses the configured grid emissions factor.</span></div>
+        </section>
+        <section class="assessment-panel" id="panel-3" aria-labelledby="waste-heading" data-panel="3">
+            <div class="assessment-category-banner banner-waste"><span>WASTE &amp; MATERIALS</span></div>
+            <div class="panel-heading"><span class="panel-index">04 · WASTE</span><h2 id="waste-heading">What materials do you throw away?</h2><p>Estimate your household's typical weekly amount.</p></div>
+            <div class="assessment-fields assessment-fields-compact">
+                {% for key, label in [('plastic','Plastic'),('glass','Glass'),('metal','Metal'),('other','Other materials')] %}
+                {{ assessment_input(key, label, 'kg / week', 0.1, 20) }}
+                {% endfor %}
+            </div>
+            <div class="assessment-callout"><strong>Good to know</strong><span>Waste inputs are weekly amounts. The calculation applies the documented material factors and converts them to a monthly estimate.</span></div>
+        </section>
+        <div class="assessment-actions">
+            <button type="button" class="btn btn-outline guided-only" id="back-button" disabled>Back</button>
+            <button type="submit" name="action" value="save" class="btn btn-secondary">Save progress</button>
+            <button type="button" class="btn btn-primary guided-only" id="next-button">Continue</button>
+            <button type="submit" class="btn btn-primary quick-only" hidden>Calculate footprint</button>
+        </div>
+    </form>
+    <aside class="assessment-aside" aria-label="Assessment progress">
+        <div class="aside-topline"><span class="aside-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M19.5 4.5c-7.2 0-12.7 3.5-12.7 9.1 0 3.2 2.1 5.4 5.1 5.4 5.6 0 8.2-7.1 7.6-14.5Z"/><path d="M6.5 20c2.4-4.1 5.4-7.2 9.5-10"/></svg></span><span>ECOTRACK / PERSONAL</span></div>
+        <p class="aside-overline">YOUR ASSESSMENT</p>
+        <h2>Small details add up.</h2>
+        <p class="aside-copy">A useful estimate starts with your everyday patterns. Enter what you know; zero is a valid answer.</p>
+        <div class="completion-block"><div class="completion-heading"><span>Information added</span><strong id="answer-count">0 / 22</strong></div><div class="completion-track"><span id="answer-progress"></span></div><p id="completion-message">Your answers stay on this page until you save or calculate.</p></div>
+        <div class="category-guide">
+            <h3>What we measure</h3>
+            <div><span class="guide-dot travel-dot"></span><p><strong>Travel</strong><small>Distance by vehicle and air travel</small></p></div>
+            <div><span class="guide-dot food-dot"></span><p><strong>Food</strong><small>Diet pattern and food-related waste</small></p></div>
+            <div><span class="guide-dot energy-dot"></span><p><strong>Energy</strong><small>Grid electricity less solar generation</small></p></div>
+            <div><span class="guide-dot waste-dot"></span><p><strong>Waste</strong><small>Weekly material waste by type</small></p></div>
+        </div>
+        <p class="aside-footnote">Your estimate is educational. Actual emissions vary by supplier, location, route, and behavior.</p>
+    </aside>
+</div>
+</div>
+{% if result %}
+<section class="assessment-result" aria-labelledby="result-heading">
+    <div class="result-heading"><div><span class="assessment-eyebrow">YOUR RESULTS</span><h2 id="result-heading">Your estimated footprint</h2><p class="muted">A category-by-category view of the information you provided.</p></div><span class="result-status">{{ status }}</span></div>
+    <div class="result-summary">
+        <article class="result-total-card"><span class="result-label">Estimated monthly total</span><strong>{{ '%.2f'|format(result.total_monthly) }} <small>kg CO2e</small></strong><span>Across all four categories</span></article>
+        <article class="result-stat-card"><span class="result-label">Annual estimate</span><strong>{{ '%.2f'|format(result.tonnes_yearly) }} <small>tonnes CO2e</small></strong><span>{{ '%.2f'|format(result.total_yearly) }} kg CO2e per year</span></article>
+        <article class="result-stat-card"><span class="result-label">Largest category</span><strong class="result-largest">{{ (result.monthly|dictsort(by='value')|last)[0]|title if result.total_monthly else 'No activity' }}</strong><span>Based on your monthly estimate</span></article>
+    </div>
+    <div class="breakdown-panel"><div class="breakdown-heading"><div><h3>Monthly category breakdown</h3><p>Estimated CO2e contribution from each part of your routine.</p></div><span>KG CO2e / MONTH</span></div>
+        <ul class="result-breakdown">{% for category, value in result.monthly.items() %}{% set share = ((value / result.total_monthly) * 100) if result.total_monthly else 0 %}<li class="breakdown-item breakdown-{{ category }}"><div class="breakdown-label"><span><i aria-hidden="true"></i>{{ category|title }}</span><strong>{{ '%.2f'|format(value) }} <small>kg CO2e</small></strong></div><div class="breakdown-track" role="img" aria-label="{{ category|title }} contributes {{ '%.1f'|format(share) }} percent"><span style="--share: {{ share }}%"></span></div><small class="breakdown-share">{{ '%.1f'|format(share) }}% of monthly total</small></li>{% endfor %}</ul>
+    </div>
+    <p class="result-disclaimer">This is an estimate based on regional assumptions and the periods you entered. Real emissions vary with technology, supplier, route, and individual behavior.</p>
+</section>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+    const form = document.getElementById('assessment-form');
+    const screen = document.getElementById('assessment-screen');
+    const panels = [...form.querySelectorAll('[data-panel]')];
+    const steps = [...form.querySelectorAll('[data-step]')];
+    const questions = [...form.querySelectorAll('.assessment-question')];
+    const fields = questions.map(question => question.querySelector('input[type="number"], select, input[type="radio"]:checked')).filter(Boolean);
+    const stepProgress = form.querySelector('[role="progressbar"]');
+    const answerCount = document.getElementById('answer-count');
+    const currentStepNumber = document.getElementById('current-step-number');
+    const questionTitle = document.getElementById('question-title');
+    let guided = true;
+    let currentQuestion = 0;
+
+    function syncSlider(questionElement) {
+        const number = questionElement.querySelector('input[type="number"]');
+        const range = questionElement.querySelector('.assessment-range');
+        if (!number || !range) return;
+        const output = questionElement.querySelector('output');
+        const value = Number(number.value || 0);
+        if (value > Number(range.max)) range.max = String(Number((Math.ceil(value / Number(range.step)) * Number(range.step)).toFixed(6)));
+        range.value = String(value);
+        range.style.setProperty('--range-fill', `${Math.min(100, value / Number(range.max) * 100)}%`);
+        output.value = number.value || '0';
+        output.textContent = number.value || '0';
+    }
+
+    function updateAnswers() {
+        const answered = fields.filter(field => field.value !== '').length;
+        const percent = guided ? Math.round((currentQuestion + 1) / questions.length * 100) : Math.round(answered / fields.length * 100);
+        answerCount.textContent = `${answered} / ${fields.length}`;
+        currentStepNumber.textContent = String(guided ? currentQuestion + 1 : answered).padStart(2, '0');
+        document.getElementById('question-count-label').textContent = guided ? ` / ${questions.length}` : ' / 22 completed';
+        document.getElementById('answer-progress').style.width = `${percent}%`;
+        stepProgress.setAttribute('aria-valuenow', String(guided ? currentQuestion + 1 : answered));
+        document.getElementById('completion-message').textContent = answered === fields.length
+            ? 'All assessment details are filled in.'
+            : `${fields.length - answered} ${fields.length - answered === 1 ? 'detail' : 'details'} left to add. You can still calculate with estimates.`;
+        panels.forEach((panel, index) => {
+            const step = steps[index];
+            const panelFields = [...panel.querySelectorAll('.assessment-question input[type="number"], .assessment-question select, .assessment-question input[type="radio"]:checked')];
+            step.classList.toggle('complete', panelFields.length > 0 && panelFields.every(field => field.value !== ''));
+        });
+    }
+
+    function categoryIndex(question) {
+        return panels.indexOf(question.closest('[data-panel]'));
+    }
+
+    function setQuestion(index, moveFocus = false) {
+        currentQuestion = Math.max(0, Math.min(questions.length - 1, index));
+        const question = questions[currentQuestion];
+        const panel = question.closest('[data-panel]');
+        const panelIndex = panels.indexOf(panel);
+        const label = question.querySelector('label, legend').textContent.trim();
+        const prompts = {
+            petrol_car: 'How far do you travel by petrol car?', diesel_car: 'How far do you travel by diesel car?',
+            cng_car: 'How far do you travel by CNG car?', hybrid_car: 'How far do you travel by hybrid car?',
+            electric_car: 'How far do you travel by electric car?', petrol_bike: 'How far do you travel by petrol bike or scooter?',
+            electric_bike: 'How far do you travel by electric bike or scooter?', bus: 'How far do you travel by bus?',
+            train: 'How far do you travel by train or metro?', auto: 'How far do you travel by auto-rickshaw?',
+            taxi: 'How far do you travel by taxi or cab?', domestic_flights: 'How many domestic flights do you take each year?',
+            international_flights: 'How many international flights do you take each year?', diet_type: 'Which diet pattern best describes you?',
+            food_waste: 'How much food do you throw away each week?', paper_food: 'How much paper food packaging do you discard each week?',
+            electricity_kwh: 'How much grid electricity does your home use?', solar_generation: 'How much solar electricity does your home generate?',
+            plastic: 'How much plastic waste does your household discard each week?', glass: 'How much glass waste does your household discard each week?',
+            metal: 'How much metal waste does your household discard each week?', other: 'How much other material waste does your household discard each week?'
+        };
+        questionTitle.textContent = prompts[question.dataset.questionField] || label;
+        panels.forEach(item => { item.hidden = item !== panel; });
+        questions.forEach((item, questionIndex) => { item.hidden = item !== question; });
+        screen.dataset.scene = ['travel', 'food', 'energy', 'waste'][panelIndex];
+        screen.classList.remove('scene-transition');
+        requestAnimationFrame(() => screen.classList.add('scene-transition'));
+        steps.forEach((step, index) => {
+            step.classList.toggle('active', index === panelIndex);
+            if (index === panelIndex) step.setAttribute('aria-current', 'location');
+            else step.removeAttribute('aria-current');
+        });
+        document.getElementById('back-button').disabled = currentQuestion === 0;
+        document.getElementById('next-button').textContent = currentQuestion === questions.length - 1 ? 'Calculate footprint' : 'Continue';
+        updateAnswers();
+        if (moveFocus) {
+            const focusTarget = question.querySelector('.assessment-range, input[type="radio"], input[type="number"], select');
+            requestAnimationFrame(() => focusTarget?.focus());
+        }
+    }
+
+    function setMode(mode) {
+        guided = mode === 'guided';
+        screen.classList.toggle('assessment-guided', guided);
+        screen.classList.toggle('assessment-quick-entry', !guided);
+        document.getElementById('guided-mode-button').classList.toggle('active', guided);
+        document.getElementById('quick-mode-button').classList.toggle('active', !guided);
+        document.getElementById('guided-mode-button').setAttribute('aria-pressed', String(guided));
+        document.getElementById('quick-mode-button').setAttribute('aria-pressed', String(!guided));
+        document.getElementById('assessment-mode-label').textContent = guided ? 'GUIDED ASSESSMENT' : 'QUICK ENTRY';
+        document.querySelectorAll('.guided-only').forEach(button => { button.hidden = !guided; });
+        document.querySelectorAll('.quick-only').forEach(button => { button.hidden = guided; });
+        if (guided) {
+            setQuestion(currentQuestion);
+        } else {
+            panels.forEach(panel => { panel.hidden = false; });
+            questions.forEach(question => { question.hidden = false; });
+            document.getElementById('question-count-label').textContent = ' / 22 completed';
+            updateAnswers();
+        }
+    }
+
+    questions.forEach(question => {
+        const number = question.querySelector('input[type="number"]');
+        const range = question.querySelector('.assessment-range');
+        if (number && range) {
+            syncSlider(question);
+            number.addEventListener('input', () => { syncSlider(question); updateAnswers(); });
+            range.addEventListener('input', () => {
+                number.value = range.value;
+                syncSlider(question);
+                updateAnswers();
+            });
+        } else {
+            question.querySelectorAll('select, input[type="radio"]').forEach(control => {
+                control.addEventListener('change', updateAnswers);
+            });
+        }
+    });
+
+    steps.forEach((step, index) => step.addEventListener('click', () => {
+        if (guided) {
+            const firstQuestion = questions.findIndex(question => categoryIndex(question) === index);
+            setQuestion(firstQuestion, true);
+        } else {
+            panels[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            steps.forEach(item => {
+                item.classList.toggle('active', item === step);
+                if (item === step) item.setAttribute('aria-current', 'location');
+                else item.removeAttribute('aria-current');
+            });
+        }
+    }));
+
+    const panelObserver = new IntersectionObserver(entries => {
+        if (guided) return;
+        const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        const activeIndex = panels.indexOf(visible.target);
+        steps.forEach((step, index) => {
+            step.classList.toggle('active', index === activeIndex);
+            if (index === activeIndex) step.setAttribute('aria-current', 'location');
+            else step.removeAttribute('aria-current');
+        });
+    }, { threshold: [0.2, 0.5] });
+    panels.forEach(panel => panelObserver.observe(panel));
+    document.getElementById('guided-mode-button').addEventListener('click', () => setMode('guided'));
+    document.getElementById('quick-mode-button').addEventListener('click', () => setMode('quick'));
+    document.getElementById('back-button').addEventListener('click', () => setQuestion(currentQuestion - 1, true));
+    document.getElementById('next-button').addEventListener('click', () => {
+        if (currentQuestion === questions.length - 1) form.requestSubmit();
+        else setQuestion(currentQuestion + 1, true);
+    });
+    setMode('guided');
+})();
+</script>
+{% endblock %}
